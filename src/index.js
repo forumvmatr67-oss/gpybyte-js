@@ -96,61 +96,56 @@ const UNIT_NAMES = {
 // ========== Конвертер ==========
 
 class Converter {
-    /**
-     * Переводит значение в байты
-     * @param {number|bigint} value - Числовое значение
-     * @param {string} unit - Единица измерения
-     * @returns {bigint} Количество байт
-     */
     static toBytes(value, unit) {
-        const val = typeof value === 'number' ? BigInt(value) : value;
-        return val * TO_BYTES[unit];
+        // Поддерживаем числа с плавающей точкой
+        if (typeof value === 'number') {
+            // Преобразуем число в BigInt с учётом десятичных
+            const str = value.toString();
+            if (str.includes('.')) {
+                // Для дробных чисел используем Decimal подход
+                const parts = str.split('.');
+                const integerPart = BigInt(parts[0]);
+                const fractionalPart = parts[1];
+                const factor = TO_BYTES[unit];
+                
+                // Вычисляем как (целая часть * фактор) + (дробная часть * фактор / 10^длина)
+                const result = integerPart * factor;
+                if (fractionalPart && fractionalPart.length > 0) {
+                    const fracNum = BigInt(fractionalPart);
+                    const divisor = 10n ** BigInt(fractionalPart.length);
+                    const extra = (fracNum * factor) / divisor;
+                    return result + extra;
+                }
+                return result;
+            }
+            return BigInt(value) * TO_BYTES[unit];
+        }
+        return value * TO_BYTES[unit];
     }
     
-    /**
-     * Переводит байты в указанную единицу
-     * @param {bigint} bytes - Количество байт
-     * @param {string} unit - Целевая единица
-     * @returns {number} Значение в целевой единице
-     */
     static fromBytes(bytes, unit) {
-        return Number(bytes) / Number(TO_BYTES[unit]);
+        const factor = Number(TO_BYTES[unit]);
+        return Number(bytes) / factor;
     }
     
-    /**
-     * Конвертирует значение из одной единицы в другую
-     * @param {number} value - Значение в исходной единице
-     * @param {string} fromUnit - Исходная единица
-     * @param {string} toUnit - Целевая единица
-     * @returns {number} Значение в целевой единице
-     */
     static convert(value, fromUnit, toUnit) {
-        const bytes = this.toBytes(BigInt(value), fromUnit);
+        const bytes = this.toBytes(value, fromUnit);
         return this.fromBytes(bytes, toUnit);
     }
 }
 
 // ========== Форматирование ==========
 
-/**
- * Форматирует объём памяти в человекочитаемый вид
- * @param {number|bigint} value - Числовое значение
- * @param {Object} options - Опции форматирования
- * @param {string} [options.unit] - Исходная единица (по умолчанию байты)
- * @param {string} [options.targetUnit] - Целевая единица (автовыбор)
- * @param {number} [options.precision=2] - Количество знаков после запятой
- * @param {boolean} [options.binary=false] - Использовать двоичные единицы
- * @param {boolean} [options.useFullName=false] - Использовать полные названия
- * @returns {string} Отформатированная строка
- */
 function formatSize(value, options = {}) {
     const { unit = Unit.B, targetUnit = null, precision = 2, binary = false, useFullName = false } = options;
     
     let bytes;
     if (typeof value === 'bigint') {
         bytes = value;
+    } else if (typeof value === 'number') {
+        bytes = Converter.toBytes(value, unit);
     } else {
-        bytes = Converter.toBytes(BigInt(value), unit);
+        bytes = BigInt(value);
     }
     
     let target = targetUnit;
@@ -178,12 +173,6 @@ function formatSize(value, options = {}) {
     return `${numberStr} ${suffix}`;
 }
 
-/**
- * Автоматический выбор оптимальной единицы
- * @param {bigint} bytes - Количество байт
- * @param {boolean} binary - Использовать двоичные единицы
- * @returns {string} Оптимальная единица
- */
 function autoSelectUnit(bytes, binary = false) {
     let units;
     if (binary) {
@@ -205,13 +194,6 @@ function autoSelectUnit(bytes, binary = false) {
     return Unit.B;
 }
 
-/**
- * Автоматическое форматирование байт
- * @param {number|bigint} bytes - Количество байт
- * @param {boolean} binary - Использовать двоичные единицы
- * @param {number} precision - Точность
- * @returns {string} Отформатированная строка
- */
 function bestFormat(bytes, binary = false, precision = 2) {
     const unit = autoSelectUnit(BigInt(bytes), binary);
     return formatSize(bytes, { unit: Unit.B, targetUnit: unit, precision });
@@ -219,19 +201,15 @@ function bestFormat(bytes, binary = false, precision = 2) {
 
 // ========== Парсинг ==========
 
-/**
- * Парсит строку с размером памяти
- * @param {string} sizeStr - Строка вида "2.5 MB" или "10 GPY"
- * @param {boolean} returnUnit - Вернуть единицу измерения
- * @returns {number|Object} Значение в байтах или {value, unit}
- */
 function parseSize(sizeStr, returnUnit = false) {
+    // Поддержка чисел с запятой и точкой
     const match = sizeStr.match(/^([\d.,]+)\s*([a-zA-Zа-яА-Я]+)/);
     if (!match) {
         throw new Error(`Не удалось распарсить: ${sizeStr}`);
     }
     
-    const value = parseFloat(match[1].replace(',', '.'));
+    let numStr = match[1].replace(',', '.');
+    const value = parseFloat(numStr);
     const unitStr = match[2];
     const unit = normalizeUnit(unitStr);
     
@@ -242,11 +220,6 @@ function parseSize(sizeStr, returnUnit = false) {
     return Converter.convert(value, unit, Unit.B);
 }
 
-/**
- * Нормализует строку с единицей измерения
- * @param {string} unitStr - Строка с единицей
- * @returns {string} Нормализованная единица
- */
 function normalizeUnit(unitStr) {
     const lower = unitStr.toLowerCase();
     
@@ -281,21 +254,10 @@ function normalizeUnit(unitStr) {
     return map[lower];
 }
 
-// ========== Вспомогательные функции ==========
-
-/**
- * Возвращает список всех единиц измерения
- * @returns {string[]} Массив единиц
- */
 function getUnits() {
     return Object.values(Unit);
 }
 
-/**
- * Возвращает информацию о единице
- * @param {string} unit - Единица измерения
- * @returns {Object} Информация о единице
- */
 function getUnitInfo(unit) {
     const decimal = [Unit.B, Unit.KB, Unit.MB, Unit.GB, Unit.TB, Unit.PB, Unit.EB, Unit.ZB, Unit.YB];
     const binary = [Unit.KiB, Unit.MiB, Unit.GiB, Unit.TiB, Unit.PiB, Unit.EiB, Unit.ZiB, Unit.YiB];
@@ -308,8 +270,6 @@ function getUnitInfo(unit) {
     
     return { symbol: unit, name: UNIT_NAMES[unit], type };
 }
-
-// ========== Экспорт ==========
 
 module.exports = {
     Unit,
