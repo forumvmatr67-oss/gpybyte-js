@@ -1,17 +1,13 @@
 {
   "name": "gpybyte",
   "version": "0.1.0",
-  "description": "GPYByte - memory units converter with JPYByte standard support for GIS",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "description": "GPYByte - библиотека для работы с единицами измерения памяти (поддержка стандарта JPYByte: IPY/HPY/GPY/JPY)",
+  "main": "src/index.js",
   "bin": {
-    "gpybyte": "./dist/cli.js"
+    "gpybyte": "./src/cli.js"
   },
   "scripts": {
-    "build": "tsc",
-    "test": "node tests/test.js",
-    "prepublishOnly": "npm run build",
-    "start": "node dist/index.js"
+    "test": "node tests/test.js"
   },
   "keywords": [
     "memory",
@@ -23,24 +19,10 @@
     "kilobytes",
     "megabytes",
     "gigabytes",
-    "gis",
-    "ipython",
-    "jupyter"
+    "gis"
   ],
   "author": "Gosha",
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/forumvmatr67-oss/gpybyte-js"
-  },
-  "bugs": {
-    "url": "https://github.com/forumvmatr67-oss/gpybyte-js/issues"
-  },
-  "homepage": "https://github.com/forumvmatr67-oss/gpybyte-js#readme",
-  "devDependencies": {
-    "@types/node": "^20.0.0",
-    "typescript": "^5.0.0"
-  },
   "engines": {
     "node": ">=14.0.0"
   }
