@@ -13,7 +13,7 @@
     "prepublishOnly": "npm run build"
   },
   "keywords": ["memory", "units", "gpybyte", "jpybyte", "converter", "bytes", "gis"],
-  "author": "Your Name",
+  "author": "Gosha",
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^20.0.0",
