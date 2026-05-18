@@ -1,21 +1,14 @@
 /**
  * gpybyte - библиотека для работы с единицами измерения памяти
- * 
- * Поддерживаемые единицы:
- * - Десятичные: B, KB, MB, GB, TB, PB, EB, ZB, YB
- * - Двоичные: KiB, MiB, GiB, TiB, PiB, EiB, ZiB, YiB
- * - Стандарт JPYByte: IPY, HPY, GPY, JPY
- * 
- * @example
- * const { formatSize, Converter, Unit } = require('gpybyte');
- * console.log(formatSize(1234567890)); // "1.23 GB"
- * console.log(Converter.convert(1, Unit.GB, Unit.MB)); // 1000
+ * Версия: 0.1.0
+ * Автор: Георгий Назаров
+ * Лицензия: MIT
  */
 
 // ========== Единицы измерения ==========
 
 const Unit = {
-    // Десятичные (основание 1000)
+    // Десятичные (1000)
     B: "B",
     KB: "KB",
     MB: "MB",
@@ -26,7 +19,7 @@ const Unit = {
     ZB: "ZB",
     YB: "YB",
     
-    // Двоичные (основание 1024)
+    // Двоичные (1024)
     KiB: "KiB",
     MiB: "MiB",
     GiB: "GiB",
@@ -36,7 +29,7 @@ const Unit = {
     ZiB: "ZiB",
     YiB: "YiB",
     
-    // Стандарт JPYByte для ГИС
+    // Стандарт JPYByte
     IPY: "IPY",
     HPY: "HPY",
     GPY: "GPY",
@@ -49,32 +42,33 @@ const TO_BYTES = {
     // Десятичные
     [Unit.B]: 1n,
     [Unit.KB]: 1000n,
-    [Unit.MB]: 1000n ** 2n,
-    [Unit.GB]: 1000n ** 3n,
-    [Unit.TB]: 1000n ** 4n,
-    [Unit.PB]: 1000n ** 5n,
-    [Unit.EB]: 1000n ** 6n,
-    [Unit.ZB]: 1000n ** 7n,
-    [Unit.YB]: 1000n ** 8n,
+    [Unit.MB]: 1000000n,
+    [Unit.GB]: 1000000000n,
+    [Unit.TB]: 1000000000000n,
+    [Unit.PB]: 1000000000000000n,
+    [Unit.EB]: 1000000000000000000n,
+    [Unit.ZB]: 1000000000000000000000n,
+    [Unit.YB]: 1000000000000000000000000n,
     
     // Двоичные
     [Unit.KiB]: 1024n,
-    [Unit.MiB]: 1024n ** 2n,
-    [Unit.GiB]: 1024n ** 3n,
-    [Unit.TiB]: 1024n ** 4n,
-    [Unit.PiB]: 1024n ** 5n,
-    [Unit.EiB]: 1024n ** 6n,
-    [Unit.ZiB]: 1024n ** 7n,
-    [Unit.YiB]: 1024n ** 8n,
+    [Unit.MiB]: 1048576n,
+    [Unit.GiB]: 1073741824n,
+    [Unit.TiB]: 1099511627776n,
+    [Unit.PiB]: 1125899906842624n,
+    [Unit.EiB]: 1152921504606846976n,
+    [Unit.ZiB]: 1180591620717411303424n,
+    [Unit.YiB]: 1208925819614629174706176n,
     
     // Стандарт JPYByte
-    [Unit.IPY]: 2n ** 90n,
-    [Unit.HPY]: 1000n * (2n ** 90n),
-    [Unit.GPY]: (1000n ** 2n) * (2n ** 90n),
-    [Unit.JPY]: (1000n ** 3n) * (2n ** 90n)
+    [Unit.IPY]: 1237940039285380274899124224n,
+    [Unit.HPY]: 1237940039285380274899124224000n,
+    [Unit.GPY]: 1237940039285380274899124224000000n,
+    [Unit.JPY]: 1237940039285380274899124224000000000n
 };
 
-// Человекочитаемые названия (русский язык)
+// ========== Русские названия ==========
+
 const UNIT_NAMES = {
     [Unit.B]: "байт",
     [Unit.KB]: "килобайт",
@@ -85,7 +79,6 @@ const UNIT_NAMES = {
     [Unit.EB]: "эксабайт",
     [Unit.ZB]: "зеттабайт",
     [Unit.YB]: "йоттабайт",
-    
     [Unit.KiB]: "кибибайт",
     [Unit.MiB]: "мебибайт",
     [Unit.GiB]: "гибибайт",
@@ -94,7 +87,6 @@ const UNIT_NAMES = {
     [Unit.EiB]: "эксбибайт",
     [Unit.ZiB]: "зебибайт",
     [Unit.YiB]: "йобибайт",
-    
     [Unit.IPY]: "айпибайт",
     [Unit.HPY]: "эйчпибайт",
     [Unit.GPY]: "джипибайт",
@@ -133,7 +125,7 @@ class Converter {
      * @returns {number} Значение в целевой единице
      */
     static convert(value, fromUnit, toUnit) {
-        const bytes = this.toBytes(value, fromUnit);
+        const bytes = this.toBytes(BigInt(value), fromUnit);
         return this.fromBytes(bytes, toUnit);
     }
 }
@@ -152,49 +144,34 @@ class Converter {
  * @returns {string} Отформатированная строка
  */
 function formatSize(value, options = {}) {
-    const {
-        unit = Unit.B,
-        targetUnit = null,
-        precision = 2,
-        binary = false,
-        useFullName = false
-    } = options;
+    const { unit = Unit.B, targetUnit = null, precision = 2, binary = false, useFullName = false } = options;
     
-    // Переводим в байты
     let bytes;
-    if (typeof value === 'number' || typeof value === 'bigint') {
-        bytes = Converter.toBytes(value, unit);
+    if (typeof value === 'bigint') {
+        bytes = value;
     } else {
-        bytes = BigInt(value);
+        bytes = Converter.toBytes(BigInt(value), unit);
     }
     
-    // Выбираем целевую единицу
     let target = targetUnit;
     if (!target) {
         target = autoSelectUnit(bytes, binary);
     }
     
-    // Конвертируем
     const converted = Converter.fromBytes(bytes, target);
-    
-    // Форматируем число
     let numberStr = converted.toFixed(precision);
+    
     if (numberStr.endsWith('.00')) {
         numberStr = numberStr.slice(0, -3);
     }
     
-    // Добавляем суффикс
     let suffix = target;
     if (useFullName) {
         suffix = UNIT_NAMES[target];
         if (converted !== 1) {
-            if (suffix.endsWith('т')) {
-                suffix += 'а';
-            } else if (suffix.endsWith('й')) {
-                suffix = suffix.slice(0, -1) + 'я';
-            } else {
-                suffix += 'ов';
-            }
+            if (suffix.endsWith('т')) suffix += 'а';
+            else if (suffix.endsWith('й')) suffix = suffix.slice(0, -1) + 'я';
+            else suffix += 'ов';
         }
     }
     
@@ -215,16 +192,13 @@ function autoSelectUnit(bytes, binary = false) {
         units = [Unit.B, Unit.KB, Unit.MB, Unit.GB, Unit.TB, Unit.PB, Unit.EB, Unit.ZB, Unit.YB];
     }
     
-    // Добавляем стандарт JPYByte для огромных чисел
     if (bytes >= TO_BYTES[Unit.IPY]) {
         units.push(Unit.IPY, Unit.HPY, Unit.GPY, Unit.JPY);
     }
     
-    // Идём с конца
     for (let i = units.length - 1; i >= 0; i--) {
-        const u = units[i];
-        if (bytes >= TO_BYTES[u]) {
-            return u;
+        if (bytes >= TO_BYTES[units[i]]) {
+            return units[i];
         }
     }
     
@@ -257,11 +231,8 @@ function parseSize(sizeStr, returnUnit = false) {
         throw new Error(`Не удалось распарсить: ${sizeStr}`);
     }
     
-    let numStr = match[1].replace(',', '.');
-    const value = parseFloat(numStr);
-    let unitStr = match[2];
-    
-    // Нормализуем единицу
+    const value = parseFloat(match[1].replace(',', '.'));
+    const unitStr = match[2];
     const unit = normalizeUnit(unitStr);
     
     if (returnUnit) {
@@ -279,7 +250,7 @@ function parseSize(sizeStr, returnUnit = false) {
 function normalizeUnit(unitStr) {
     const lower = unitStr.toLowerCase();
     
-    const mapping = {
+    const map = {
         'b': Unit.B, 'байт': Unit.B, 'байта': Unit.B, 'байтов': Unit.B,
         'kb': Unit.KB, 'кб': Unit.KB, 'килобайт': Unit.KB,
         'mb': Unit.MB, 'мб': Unit.MB, 'мегабайт': Unit.MB,
@@ -289,7 +260,6 @@ function normalizeUnit(unitStr) {
         'eb': Unit.EB, 'эб': Unit.EB, 'эксабайт': Unit.EB,
         'zb': Unit.ZB, 'зб': Unit.ZB, 'зеттабайт': Unit.ZB,
         'yb': Unit.YB, 'йб': Unit.YB, 'йоттабайт': Unit.YB,
-        
         'kib': Unit.KiB, 'киб': Unit.KiB, 'кибибайт': Unit.KiB,
         'mib': Unit.MiB, 'миб': Unit.MiB, 'мебибайт': Unit.MiB,
         'gib': Unit.GiB, 'гиб': Unit.GiB, 'гибибайт': Unit.GiB,
@@ -298,21 +268,20 @@ function normalizeUnit(unitStr) {
         'eib': Unit.EiB, 'эиб': Unit.EiB, 'эксбибайт': Unit.EiB,
         'zib': Unit.ZiB, 'зиб': Unit.ZiB, 'зебибайт': Unit.ZiB,
         'yib': Unit.YiB, 'йиб': Unit.YiB, 'йобибайт': Unit.YiB,
-        
         'ipy': Unit.IPY, 'айпибайт': Unit.IPY,
         'hpy': Unit.HPY, 'эйчпибайт': Unit.HPY,
         'gpy': Unit.GPY, 'джипибайт': Unit.GPY,
         'jpy': Unit.JPY, 'джейпибайт': Unit.JPY
     };
     
-    if (!mapping[lower]) {
-        throw new Error(`Неизвестная единица измерения: ${unitStr}`);
+    if (!map[lower]) {
+        throw new Error(`Неизвестная единица: ${unitStr}`);
     }
     
-    return mapping[lower];
+    return map[lower];
 }
 
-// ========== Список единиц ==========
+// ========== Вспомогательные функции ==========
 
 /**
  * Возвращает список всех единиц измерения
@@ -328,26 +297,16 @@ function getUnits() {
  * @returns {Object} Информация о единице
  */
 function getUnitInfo(unit) {
-    const decimalUnits = [Unit.B, Unit.KB, Unit.MB, Unit.GB, Unit.TB, Unit.PB, Unit.EB, Unit.ZB, Unit.YB];
-    const binaryUnits = [Unit.KiB, Unit.MiB, Unit.GiB, Unit.TiB, Unit.PiB, Unit.EiB, Unit.ZiB, Unit.YiB];
-    const jpybyteUnits = [Unit.IPY, Unit.HPY, Unit.GPY, Unit.JPY];
+    const decimal = [Unit.B, Unit.KB, Unit.MB, Unit.GB, Unit.TB, Unit.PB, Unit.EB, Unit.ZB, Unit.YB];
+    const binary = [Unit.KiB, Unit.MiB, Unit.GiB, Unit.TiB, Unit.PiB, Unit.EiB, Unit.ZiB, Unit.YiB];
+    const jpybyte = [Unit.IPY, Unit.HPY, Unit.GPY, Unit.JPY];
     
-    let type;
-    if (decimalUnits.includes(unit)) {
-        type = 'десятичная';
-    } else if (binaryUnits.includes(unit)) {
-        type = 'двоичная';
-    } else if (jpybyteUnits.includes(unit)) {
-        type = 'стандарт JPYByte';
-    } else {
-        type = 'неизвестная';
-    }
+    let type = 'неизвестная';
+    if (decimal.includes(unit)) type = 'десятичная';
+    else if (binary.includes(unit)) type = 'двоичная';
+    else if (jpybyte.includes(unit)) type = 'стандарт JPYByte';
     
-    return {
-        symbol: unit,
-        name: UNIT_NAMES[unit],
-        type: type
-    };
+    return { symbol: unit, name: UNIT_NAMES[unit], type };
 }
 
 // ========== Экспорт ==========
