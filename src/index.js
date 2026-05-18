@@ -40,31 +40,31 @@ const Unit = {
 
 const TO_BYTES = {
     // Десятичные
-    [Unit.B]: 1n,
-    [Unit.KB]: 1000n,
-    [Unit.MB]: 1000000n,
-    [Unit.GB]: 1000000000n,
-    [Unit.TB]: 1000000000000n,
-    [Unit.PB]: 1000000000000000n,
-    [Unit.EB]: 1000000000000000000n,
-    [Unit.ZB]: 1000000000000000000000n,
-    [Unit.YB]: 1000000000000000000000000n,
+    [Unit.B]: 1,
+    [Unit.KB]: 1000,
+    [Unit.MB]: 1000000,
+    [Unit.GB]: 1000000000,
+    [Unit.TB]: 1000000000000,
+    [Unit.PB]: 1000000000000000,
+    [Unit.EB]: 1000000000000000000,
+    [Unit.ZB]: 1000000000000000000000,
+    [Unit.YB]: 1000000000000000000000000,
     
     // Двоичные
-    [Unit.KiB]: 1024n,
-    [Unit.MiB]: 1048576n,
-    [Unit.GiB]: 1073741824n,
-    [Unit.TiB]: 1099511627776n,
-    [Unit.PiB]: 1125899906842624n,
-    [Unit.EiB]: 1152921504606846976n,
-    [Unit.ZiB]: 1180591620717411303424n,
-    [Unit.YiB]: 1208925819614629174706176n,
+    [Unit.KiB]: 1024,
+    [Unit.MiB]: 1048576,
+    [Unit.GiB]: 1073741824,
+    [Unit.TiB]: 1099511627776,
+    [Unit.PiB]: 1125899906842624,
+    [Unit.EiB]: 1152921504606846976,
+    [Unit.ZiB]: 1180591620717411303424,
+    [Unit.YiB]: 1208925819614629174706176,
     
     // Стандарт JPYByte
-    [Unit.IPY]: 1237940039285380274899124224n,
-    [Unit.HPY]: 1237940039285380274899124224000n,
-    [Unit.GPY]: 1237940039285380274899124224000000n,
-    [Unit.JPY]: 1237940039285380274899124224000000000n
+    [Unit.IPY]: 1237940039285380274899124224,
+    [Unit.HPY]: 1237940039285380274899124224000,
+    [Unit.GPY]: 1237940039285380274899124224000000,
+    [Unit.JPY]: 1237940039285380274899124224000000000
 };
 
 // ========== Русские названия ==========
@@ -93,39 +93,15 @@ const UNIT_NAMES = {
     [Unit.JPY]: "джейпибайт"
 };
 
-// ========== Конвертер ==========
+// ========== Конвертер (работает с числами) ==========
 
 class Converter {
     static toBytes(value, unit) {
-        // Поддерживаем числа с плавающей точкой
-        if (typeof value === 'number') {
-            // Преобразуем число в BigInt с учётом десятичных
-            const str = value.toString();
-            if (str.includes('.')) {
-                // Для дробных чисел используем Decimal подход
-                const parts = str.split('.');
-                const integerPart = BigInt(parts[0]);
-                const fractionalPart = parts[1];
-                const factor = TO_BYTES[unit];
-                
-                // Вычисляем как (целая часть * фактор) + (дробная часть * фактор / 10^длина)
-                const result = integerPart * factor;
-                if (fractionalPart && fractionalPart.length > 0) {
-                    const fracNum = BigInt(fractionalPart);
-                    const divisor = 10n ** BigInt(fractionalPart.length);
-                    const extra = (fracNum * factor) / divisor;
-                    return result + extra;
-                }
-                return result;
-            }
-            return BigInt(value) * TO_BYTES[unit];
-        }
         return value * TO_BYTES[unit];
     }
     
     static fromBytes(bytes, unit) {
-        const factor = Number(TO_BYTES[unit]);
-        return Number(bytes) / factor;
+        return bytes / TO_BYTES[unit];
     }
     
     static convert(value, fromUnit, toUnit) {
@@ -139,14 +115,7 @@ class Converter {
 function formatSize(value, options = {}) {
     const { unit = Unit.B, targetUnit = null, precision = 2, binary = false, useFullName = false } = options;
     
-    let bytes;
-    if (typeof value === 'bigint') {
-        bytes = value;
-    } else if (typeof value === 'number') {
-        bytes = Converter.toBytes(value, unit);
-    } else {
-        bytes = BigInt(value);
-    }
+    let bytes = Converter.toBytes(value, unit);
     
     let target = targetUnit;
     if (!target) {
@@ -195,14 +164,13 @@ function autoSelectUnit(bytes, binary = false) {
 }
 
 function bestFormat(bytes, binary = false, precision = 2) {
-    const unit = autoSelectUnit(BigInt(bytes), binary);
+    const unit = autoSelectUnit(bytes, binary);
     return formatSize(bytes, { unit: Unit.B, targetUnit: unit, precision });
 }
 
 // ========== Парсинг ==========
 
 function parseSize(sizeStr, returnUnit = false) {
-    // Поддержка чисел с запятой и точкой
     const match = sizeStr.match(/^([\d.,]+)\s*([a-zA-Zа-яА-Я]+)/);
     if (!match) {
         throw new Error(`Не удалось распарсить: ${sizeStr}`);
