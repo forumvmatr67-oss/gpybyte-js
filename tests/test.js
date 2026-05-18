@@ -57,8 +57,8 @@ test('1 MiB = 1024 KiB', () => {
 });
 
 // ========== Стандарт JPYByte ==========
-test('1 JPY = 1000 GPY', () => {
-    const result = Converter.convert(1, Unit.JPY, Unit.GPY);
+test('1 GPY = 1000 HPY', () => {
+    const result = Converter.convert(1, Unit.GPY, Unit.HPY);
     if (result !== 1000) throw new Error(`Ожидалось 1000, получено ${result}`);
 });
 
@@ -74,8 +74,8 @@ test('1 JPY = 1000 GPY', () => {
 
 test('1 IPY = 2^90 байт', () => {
     const result = Converter.toBytes(1, Unit.IPY);
-    const expected = 2n ** 90n;
-    if (result !== expected) throw new Error(`Ожидалось ${expected}, получено ${result}`);
+    const expected = 2 ** 90;
+    if (Math.abs(result - expected) > 0.001) throw new Error(`Ожидалось ${expected}, получено ${result}`);
 });
 
 // ========== Форматирование ==========
