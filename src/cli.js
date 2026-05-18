@@ -1,22 +1,28 @@
 #!/usr/bin/env node
 
 /**
- * CLI интерфейс для gpybyte
+ * gpybyte - командная строка
+ * Версия: 0.1.0
  */
 
 const { Converter, Unit, formatSize, parseSize, getUnits, getUnitInfo } = require('./index.js');
 
-function printHelp() {
+const args = process.argv.slice(2);
+
+function help() {
     console.log(`
-gpybyte - конвертер единиц памяти (поддержка стандарта JPYByte: IPY/HPY/GPY/JPY)
+╔══════════════════════════════════════════════════════════════╗
+║                      gpybyte v0.1.0                         ║
+║         Конвертер единиц памяти (стандарт JPYByte)          ║
+╚══════════════════════════════════════════════════════════════╝
 
 Использование:
-  gpybyte convert <значение> <из> <в>     Конвертировать
-  gpybyte format <значение> [опции]       Форматировать
-  gpybyte parse <строка>                  Распарсить строку
-  gpybyte list                            Список единиц
-  gpybyte version                         Версия
-  gpybyte help                            Помощь
+  gpybyte convert <число> <из> <в>     Конвертация
+  gpybyte format <число> [опции]       Форматирование
+  gpybyte parse <строка>               Парсинг строки
+  gpybyte list                         Список единиц
+  gpybyte version                      Версия
+  gpybyte help                         Помощь
 
 Примеры:
   gpybyte convert 1 GB MB
@@ -27,132 +33,125 @@ gpybyte - конвертер единиц памяти (поддержка ст�
   gpybyte format 1234567890 --precision 4
   gpybyte parse "2.5 MB"
   gpybyte parse "10 GPY"
+  gpybyte parse "5 гигабайт"
 
 Опции format:
-  --unit <ед>       Исходная единица (по умолчанию байты)
-  --target <ед>     Целевая единица (автовыбор)
-  --binary          Использовать двоичные единицы
-  --precision <n>   Точность (по умолчанию 2)
-  --full-name       Полные названия (килобайт вместо KB)
+  --binary            Использовать двоичные единицы (KiB, MiB...)
+  --precision <число> Количество знаков после запятой (по умолчанию 2)
+  --full-name         Использовать полные названия (килобайт вместо KB)
+
+Доступные единицы:
+  Десятичные: B, KB, MB, GB, TB, PB, EB, ZB, YB
+  Двоичные:   KiB, MiB, GiB, TiB, PiB, EiB, ZiB, YiB
+  JPYByte:    IPY, HPY, GPY, JPY
 `);
 }
 
-function printVersion() {
+function version() {
     console.log('gpybyte 0.1.0 - поддержка стандарта JPYByte');
+    console.log('Автор: forumvmatr67-oss');
+    console.log('Лицензия: MIT');
 }
 
-function printUnits() {
-    console.log('\n📊 Доступные единицы измерения (стандарт JPYByte):');
+function list() {
+    console.log('\n📊 Доступные единицы измерения:');
     console.log('='.repeat(50));
-    console.log('Единица     Тип                Название');
+    console.log(' Единица     Тип                Название');
     console.log('='.repeat(50));
     
     for (const unit of getUnits()) {
         const info = getUnitInfo(unit);
-        console.log(`${unit.padEnd(10)} ${info.type.padEnd(18)} ${info.name}`);
+        const symbol = unit.padEnd(10);
+        const type = info.type.padEnd(18);
+        console.log(` ${symbol} ${type} ${info.name}`);
     }
     
     console.log('='.repeat(50));
-    console.log(`\nВсего единиц: ${getUnits().length}`);
+    console.log(`\n📐 Всего единиц: ${getUnits().length}`);
     console.log('\n📐 Стандарт JPYByte для ГИС:');
-    console.log('  IPY (айпибайт) = 2^90 байт');
-    console.log('  HPY (эйчпибайт) = 1000 IPY');
-    console.log('  GPY (джипибайт) = 1000 HPY');
-    console.log('  JPY (джейпибайт) = 1000 GPY\n');
+    console.log('  • IPY (айпибайт) = 2^90 байт');
+    console.log('  • HPY (эйчпибайт) = 1000 IPY');
+    console.log('  • GPY (джипибайт) = 1000 HPY');
+    console.log('  • JPY (джейпибайт) = 1000 GPY\n');
 }
 
-function main() {
-    const args = process.argv.slice(2);
-    
-    if (args.length === 0) {
-        printHelp();
-        return;
-    }
-    
-    const command = args[0].toLowerCase();
-    
-    switch (command) {
-        case 'convert':
-            if (args.length < 4) {
-                console.log('Ошибка: нужно указать: convert <значение> <из> <в>');
-                return;
-            }
-            const value = parseFloat(args[1]);
-            const fromUnit = args[2].toUpperCase();
-            const toUnit = args[3].toUpperCase();
-            
-            try {
-                const result = Converter.convert(value, fromUnit, toUnit);
-                console.log(`${value} ${fromUnit} = ${result} ${toUnit}`);
-            } catch (e) {
-                console.log(`Ошибка: неизвестная единица измерения`);
-            }
-            break;
-            
-        case 'format':
-            if (args.length < 2) {
-                console.log('Ошибка: нужно указать значение для форматирования');
-                return;
-            }
-            const val = parseFloat(args[1]);
-            const options = {};
-            
-            for (let i = 2; i < args.length; i++) {
-                if (args[i] === '--unit' && args[i + 1]) {
-                    options.unit = args[++i].toUpperCase();
-                } else if (args[i] === '--target' && args[i + 1]) {
-                    options.targetUnit = args[++i].toUpperCase();
-                } else if (args[i] === '--binary') {
-                    options.binary = true;
-                } else if (args[i] === '--precision' && args[i + 1]) {
-                    options.precision = parseInt(args[++i]);
-                } else if (args[i] === '--full-name') {
-                    options.useFullName = true;
-                }
-            }
-            
-            try {
-                const result = formatSize(val, options);
-                console.log(result);
-            } catch (e) {
-                console.log(`Ошибка: ${e.message}`);
-            }
-            break;
-            
-        case 'parse':
-            if (args.length < 2) {
-                console.log('Ошибка: нужно указать строку для парсинга');
-                return;
-            }
-            const str = args.slice(1).join(' ');
-            try {
-                const result = parseSize(str);
-                console.log(`${str} = ${result} байт`);
-            } catch (e) {
-                console.log(`Ошибка: ${e.message}`);
-            }
-            break;
-            
-        case 'list':
-            printUnits();
-            break;
-            
-        case 'version':
-            printVersion();
-            break;
-            
-        case 'help':
-            printHelp();
-            break;
-            
-        default:
-            console.log(`Неизвестная команда: ${command}`);
-            printHelp();
-    }
+if (args.length === 0) {
+    help();
+    process.exit(0);
 }
 
-if (require.main === module) {
-    main();
-}
+const cmd = args[0].toLowerCase();
 
-module.exports = { printHelp, printVersion, printUnits };
+switch (cmd) {
+    case 'convert':
+        if (args.length < 4) {
+            console.log('❌ Ошибка: convert <число> <из> <в>');
+            console.log('Пример: gpybyte convert 1 GB MB');
+            process.exit(1);
+        }
+        const val = parseFloat(args[1]);
+        const from = args[2].toUpperCase();
+        const to = args[3].toUpperCase();
+        try {
+            const result = Converter.convert(val, from, to);
+            console.log(`\n✅ ${val} ${from} = ${result} ${to}\n`);
+        } catch(e) {
+            console.log('❌ Ошибка: неизвестная единица измерения');
+            console.log('Доступные единицы: B, KB, MB, GB, TB, PB, EB, ZB, YB, KiB, MiB, GiB, TiB, PiB, EiB, ZiB, YiB, IPY, HPY, GPY, JPY');
+        }
+        break;
+        
+    case 'format':
+        if (args.length < 2) {
+            console.log('❌ Ошибка: format <число>');
+            console.log('Пример: gpybyte format 1234567890');
+            process.exit(1);
+        }
+        const num = parseFloat(args[1]);
+        const opts = { binary: false, precision: 2, useFullName: false };
+        for (let i = 2; i < args.length; i++) {
+            if (args[i] === '--binary') opts.binary = true;
+            if (args[i] === '--full-name') opts.useFullName = true;
+            if (args[i] === '--precision' && args[i+1]) {
+                opts.precision = parseInt(args[++i]);
+            }
+        }
+        try {
+            const result = formatSize(num, opts);
+            console.log(`\n✅ ${result}\n`);
+        } catch(e) {
+            console.log(`❌ Ошибка: ${e.message}`);
+        }
+        break;
+        
+    case 'parse':
+        if (args.length < 2) {
+            console.log('❌ Ошибка: parse <строка>');
+            console.log('Пример: gpybyte parse "2.5 MB"');
+            process.exit(1);
+        }
+        const str = args.slice(1).join(' ');
+        try {
+            const bytes = parseSize(str);
+            console.log(`\n✅ "${str}" = ${bytes} байт\n`);
+        } catch(e) {
+            console.log(`❌ Ошибка: ${e.message}`);
+        }
+        break;
+        
+    case 'list':
+        list();
+        break;
+        
+    case 'version':
+        version();
+        break;
+        
+    case 'help':
+        help();
+        break;
+        
+    default:
+        console.log(`❌ Неизвестная команда: ${cmd}`);
+        console.log('Введите "gpybyte help" для справки\n');
+}
